@@ -7,7 +7,7 @@ import (
 
 func initRouter(r *gin.Engine) {
 	// Init all database
-	controller.Init_db()
+	controller.InitDb()
 
 	// public directory is used to serve static resources
 	r.Static("/static", "./public")

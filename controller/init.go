@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Init_db() {
+func InitDb() {
 	dsn := "root:Qwer1234!@tcp(localhost:3306)/video?charset=utf8mb4&parseTime=True&loc=Local"
 	// Connect Mysql
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
