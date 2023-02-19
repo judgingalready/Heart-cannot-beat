@@ -1,5 +1,4 @@
-module github.com/RaymondCode/simple-demo
-
+module simple-demo
 go 1.17
 
 require (

@@ -3,9 +3,9 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/RaymondCode/simple-demo/controller"
 	"io"
 	"net"
+	"simple-demo/controller"
 	"testing"
 	"time"
 )

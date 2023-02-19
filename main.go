@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/RaymondCode/simple-demo/service"
-	"github.com/gin-gonic/gin"
+	"simple-demo/controller"
+	"simple-demo/service"
 
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	go service.RunMessageServer()
-
+	controller.InitDb()
 	r := gin.Default()
 
 	initRouter(r)
