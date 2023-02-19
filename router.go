@@ -3,10 +3,12 @@ package main
 import (
 	"github.com/RaymondCode/simple-demo/controller"
 	"github.com/gin-gonic/gin"
-
 )
 
 func initRouter(r *gin.Engine) {
+	// Init all database
+	controller.Init_db()
+
 	// public directory is used to serve static resources
 	r.Static("/static", "./public")
 
