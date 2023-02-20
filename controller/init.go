@@ -33,10 +33,10 @@ func InitDb() {
 		panic(err)
 	}
 
-	// err = db.AutoMigrate(&Video{})
-	// if err != nil {
-	// 	panic(err)
-	// }
+	err = db.AutoMigrate(&Video{})
+	if err != nil {
+		panic(err)
+	}
 
 	sqlDB, _ := db.DB()
 
