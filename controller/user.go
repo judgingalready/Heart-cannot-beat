@@ -2,7 +2,7 @@ package controller
 
 import (
 	"net/http"
-	"sync/atomic"
+	// "sync/atomic"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,6 +10,8 @@ import (
 // usersLoginInfo use map to store user info, and key is username+password for demo
 // user data will be cleared every time the server starts
 // test data: username=zhanglei, password=douyin
+
+// 原始用户登录map
 var usersLoginInfo = map[string]User{
 	"zhangleidouyin": {
 		Id:            1,
@@ -37,26 +39,40 @@ func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	// token先设为用户名
+	token := username
 
-	if _, exist := usersLoginInfo[token]; exist {
+	var account Account
+	accountExistErr := db.Where("name = ?", username).Take(&account).Error
+
+	if accountExistErr == nil {
 		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User already exist"},
+			Response: Response{StatusCode: 1, StatusMsg: "用户已经存在!"},
 		})
 	} else {
-		atomic.AddInt64(&userIdSequence, 1)
+		// atomic.AddInt64(&userIdSequence, 1)
+
 		newUser := User{
-			Id:   userIdSequence,
 			Name: username,
 		}
+		newAccount := Account{
+			Name:     username,
+			Password: password,
+		}
 
-		usersLoginInfo[token] = newUser
-		db.Create(newUser)
+		newUserErr := db.Create(&newUser).Error
+		if newUserErr != nil {
+			panic(nil)
+		}
+		newAccountErr := db.Create(&newAccount).Error
+		if newAccountErr != nil {
+			panic(nil)
+		}
 
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
 			UserId:   userIdSequence,
-			Token:    username + password,
+			Token:    token,
 		})
 	}
 }
@@ -65,17 +81,21 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	// token先设为用户名
+	token := username
 
-	if user, exist := usersLoginInfo[token]; exist {
+	var account Account
+	accountExitErr := db.Where("name = ? AND password = ?", username, password).Take(&account).Error
+
+	if accountExitErr == nil {
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
-			UserId:   user.Id,
+			UserId:   account.Id,
 			Token:    token,
 		})
 	} else {
 		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
+			Response: Response{StatusCode: 1, StatusMsg: "用户不存在或者密码错误！"},
 		})
 	}
 }
@@ -83,7 +103,11 @@ func Login(c *gin.Context) {
 func UserInfo(c *gin.Context) {
 	token := c.Query("token")
 
-	if user, exist := usersLoginInfo[token]; exist {
+	var user User
+	// token先设为用户名
+	userExit := db.Where("name = ?", token).Take(&user).Error
+
+	if userExit == nil {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 0},
 			User:     user,
