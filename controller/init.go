@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB //全局的db对象
+var db *gorm.DB
 
 func InitDb() {
 	//配置MySQL连接参数
@@ -23,6 +23,7 @@ func InitDb() {
 
 	// Connect Mysql
 	var err error
+
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -50,8 +51,8 @@ func InitDb() {
 }
 
 /*
-*获取gorm db对象，其他包需要执行数据库查询的时候，只要通过tools.getDB()获取db对象即可。不用担心协程并发使
-*用同样的db对象会共用同一个连接，db对象在调用他的方法的时候会从数据库连接池中获取新的连接。
+*	获取gorm db对象，其他包需要执行数据库查询的时候，只要通过getDB()获取db对象即可。不用担心协程并发使
+*	用同样的db对象会共用同一个连接，db对象在调用他的方法的时候会从数据库连接池中获取新的连接。
  */
 func GetDB() *gorm.DB {
 	return db

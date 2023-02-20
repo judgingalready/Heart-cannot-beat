@@ -7,7 +7,7 @@ type Response struct {
 
 type Video struct {
 	Id            int64 `json:"id,omitempty" gorm:"primary_key"`
-	Author        User  `json:"author" gorm:"foreignKey:AuthorID"`
+	Author        User  `json:"author" gorm:"foreignKey:Id;references:AuthorID;"`
 	AuthorID      int64
 	PlayUrl       string `json:"play_url" json:"play_url,omitempty"`
 	CoverUrl      string `json:"cover_url,omitempty"`
@@ -24,7 +24,7 @@ type Comment struct {
 }
 
 type User struct {
-	Id            int64  `json:"id,omitempty"`
+	Id            int64  `json:"id,omitempty" gorm:"primary_key"`
 	Name          string `json:"name,omitempty"`
 	FollowCount   int64  `json:"follow_count,omitempty"`
 	FollowerCount int64  `json:"follower_count,omitempty"`
