@@ -1,6 +1,6 @@
 package controller
 
-import "fmt"
+import "gorm.io/gorm"
 
 const videoCount = 30
 
@@ -16,5 +16,11 @@ func SearchVideoForPublishList(user_id int64, videos *[]Video) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(videos)
+}
+
+func VideoForAction(video_id int64, videos *[]Video, num int32) {
+	err := db.Where("id = ?", video_id).Find(videos).UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", num)).Error
+	if err != nil {
+		panic(err)
+	}
 }
