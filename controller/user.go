@@ -52,21 +52,17 @@ func Register(c *gin.Context) {
 	} else {
 		// atomic.AddInt64(&userIdSequence, 1)
 
-		newUser := User{
-			Name: username,
+		CreateUserErr := db.Create(&User{Name: username}).Error
+		if CreateUserErr != nil {
+			c.JSON(http.StatusOK, UserLoginResponse{
+				Response: Response{StatusCode: 1, StatusMsg: "用户注册错误!"},
+			})
 		}
-		newAccount := Account{
-			Name:     username,
-			Password: password,
-		}
-
-		newUserErr := db.Create(&newUser).Error
-		if newUserErr != nil {
-			panic(nil)
-		}
-		newAccountErr := db.Create(&newAccount).Error
-		if newAccountErr != nil {
-			panic(nil)
+		CreateAccountErr := db.Create(&Account{Name: username, Password: password}).Error
+		if CreateAccountErr != nil {
+			c.JSON(http.StatusOK, UserLoginResponse{
+				Response: Response{StatusCode: 1, StatusMsg: "用户注册错误!"},
+			})
 		}
 
 		c.JSON(http.StatusOK, UserLoginResponse{
@@ -105,9 +101,9 @@ func UserInfo(c *gin.Context) {
 
 	var user User
 	// token先设为用户名
-	userExit := db.Where("name = ?", token).Take(&user).Error
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
 
-	if userExit == nil {
+	if userExitErr == nil {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 0},
 			User:     user,

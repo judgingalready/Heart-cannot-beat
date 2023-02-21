@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +19,11 @@ type VideoListResponse struct {
 func Publish(c *gin.Context) {
 	token := c.PostForm("token")
 
-	if _, exist := usersLoginInfo[token]; !exist {
+	var user User
+	// token先设为用户名
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
+
+	if userExitErr != nil {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
 		return
 	}
@@ -33,10 +38,25 @@ func Publish(c *gin.Context) {
 	}
 
 	filename := filepath.Base(data.Filename)
-	user := usersLoginInfo[token]
-	finalName := fmt.Sprintf("%d_%s", user.Id, filename)
-	saveFile := filepath.Join("./public/", finalName)
+	currentTime := time.Now().Unix()
+	// 视频存入Videos数据库的url：IP:Port/static/视频本地路径
+	ip_port := "114.212.85.230:8080" //暂时写死
+	filename = fmt.Sprintf("%d_%d_%s", user.Id, currentTime, filename)
+	finalName := fmt.Sprintf("%s%s", "http://"+ip_port+"/static/", filename)
+	// 视频保存的本地路径：用户Id_视频描述_时间戳
+	saveFile := filepath.Join("./public/", filename)
+
+	CreateVideoErr := db.Create(&Video{AuthorID: user.Id, PlayUrl: finalName}).Error
+	if CreateVideoErr != nil {
+		c.JSON(http.StatusOK, Response{
+			StatusCode: 1,
+			StatusMsg:  CreateVideoErr.Error(),
+		})
+		return
+	}
+
 	if err := c.SaveUploadedFile(data, saveFile); err != nil {
+		c.SaveUploadedFile(data, saveFile)
 		c.JSON(http.StatusOK, Response{
 			StatusCode: 1,
 			StatusMsg:  err.Error(),
@@ -46,7 +66,7 @@ func Publish(c *gin.Context) {
 
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
-		StatusMsg:  finalName + " uploaded successfully",
+		StatusMsg:  filename + " 视频已上传成功！",
 	})
 }
 
