@@ -9,7 +9,6 @@ func SearchVideoForFeed(videos *[]Video) {
 	if err != nil {
 		panic(err)
 	}
-	// fmt.Println(videos)
 }
 
 func SearchVideoForPublishList(user_id int64, videos *[]Video) {
