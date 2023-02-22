@@ -17,8 +17,9 @@ type Video struct {
 }
 
 type Comment struct {
-	Id         int64  `json:"id,omitempty" gorm:"primary_key"`
-	User       User   `json:"user"`
+	Id         int64 `json:"id,omitempty" gorm:"primary_key;"`
+	User       User  `json:"user" gorm:"foreignKey:Id;references:UserID;"`
+	UserID     int64
 	Content    string `json:"content,omitempty"`
 	CreateDate string `json:"create_date,omitempty"`
 }
@@ -38,8 +39,8 @@ type Account struct {
 }
 
 type Like struct {
-	UserID  uint `gorm:"index"`
-	VideoID uint `gorm:"index"`
+	UserID  uint `gorm:"userid"`
+	VideoID uint `gorm:"videoid"`
 	// User    User  `gorm:"foreignkey:UserID"`
 	// Video   Video `gorm:"foreignkey:VideoID"`
 }

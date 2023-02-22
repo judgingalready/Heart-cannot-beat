@@ -65,6 +65,7 @@ func FavoriteList(c *gin.Context) {
 	}
 
 	var videos []Video
+
 	VideoForFavorite(userID, &videos)
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
