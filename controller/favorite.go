@@ -11,10 +11,8 @@ import (
 func FavoriteAction(c *gin.Context) {
 	token := c.Query("token")
 	actionType := c.Query("action_type")
-	var num int32
-	var videos []Video
-	var user User
 
+	var user User
 	userExitErr := db.Where("name = ?", token).Take(&user).Error
 	if userExitErr != nil {
 		c.JSON(http.StatusOK, UserResponse{
@@ -30,6 +28,8 @@ func FavoriteAction(c *gin.Context) {
 		return
 	}
 
+	var videos []Video
+	var num int32
 	if actionType == "1" {
 		num = 1
 		likes := Like{uint(user.Id), uint(video_id)}
@@ -42,6 +42,7 @@ func FavoriteAction(c *gin.Context) {
 			Response: Response{StatusCode: 1, StatusMsg: "actionType is invalid"},
 		})
 	}
+
 	VideoForAction(video_id, &videos, num)
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
@@ -51,10 +52,24 @@ func FavoriteAction(c *gin.Context) {
 
 // FavoriteList all users have same favorite video list
 func FavoriteList(c *gin.Context) {
+	token := c.Query("token")
+	userID := c.Query("user_id")
+
+	var user User
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
+	if userExitErr != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+		})
+		return
+	}
+
+	var videos []Video
+	VideoForFavorite(userID, &videos)
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
 		},
-		VideoList: DemoVideos,
+		VideoList: videos,
 	})
 }
