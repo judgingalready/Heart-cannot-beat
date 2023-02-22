@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,12 +10,36 @@ import (
 // FavoriteAction no practical effect, just check if token is valid
 func FavoriteAction(c *gin.Context) {
 	token := c.Query("token")
+	actionType := c.Query("action_type")
+	var num int32
+	var videos []Video
+	var user User
 
-	if _, exist := usersLoginInfo[token]; exist {
-		c.JSON(http.StatusOK, Response{StatusCode: 0})
-	} else {
-		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
+	if userExitErr != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+		})
+		return
 	}
+	video_id, err := strconv.ParseInt(c.Query("video_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "video_id is invalid"},
+		})
+		return
+	}
+
+	if actionType == "1" {
+		num = 1
+	} else if actionType == "2" {
+		num = -1
+	} else {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "actionType is invalid"},
+		})
+	}
+	VideoForAction(video_id, &videos, num)
 }
 
 // FavoriteList all users have same favorite video list

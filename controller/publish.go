@@ -111,13 +111,26 @@ func Publish(c *gin.Context) {
 
 // PublishList all users have same publish video list
 func PublishList(c *gin.Context) {
-	var videos []Video
 	user_id, err := strconv.ParseInt(c.Query("user_id"), 10, 64)
 	if err != nil {
-		panic(err)
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "user_id is invalid"},
+		})
+		return
 	}
-	SearchVideoForPublishList(user_id, &videos)
 
+	token := c.Query("token")
+	var user User
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
+	if userExitErr != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+		})
+		return
+	}
+
+	var videos []Video
+	SearchVideoForPublishList(user_id, &videos)
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
