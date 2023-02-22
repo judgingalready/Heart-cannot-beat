@@ -1,6 +1,7 @@
 package controller
 
 import (
+	// "fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -118,6 +119,10 @@ func FollowList(c *gin.Context) {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Users数据库查询失败"})
 		return
 	}
+	// 把users的IsFollow设为true（已关注）
+	for i, _ := range users {
+		users[i].IsFollow = true
+	}
 
 	c.JSON(http.StatusOK, UserListResponse{
 		Response: Response{
@@ -146,7 +151,7 @@ func FollowerList(c *gin.Context) {
 	}
 	followers := []int64{}
 	for _, relation := range relations {
-		followers = append(followers, relation.Follow)
+		followers = append(followers, relation.Follower)
 	}
 	// 根据id在User数据库查找
 	users := []User{}
@@ -154,6 +159,10 @@ func FollowerList(c *gin.Context) {
 	if followersFindErr != nil {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Users数据库查询失败"})
 		return
+	}
+	// 把users的IsFollow设为false（未关注）
+	for i, _ := range users {
+		users[i].IsFollow = false
 	}
 
 	c.JSON(http.StatusOK, UserListResponse{
@@ -170,6 +179,6 @@ func FriendList(c *gin.Context) {
 		Response: Response{
 			StatusCode: 0,
 		},
-		UserList: []User{DemoUser},
+		UserList: users,
 	})
 }
