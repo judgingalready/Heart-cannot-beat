@@ -179,6 +179,6 @@ func FriendList(c *gin.Context) {
 		Response: Response{
 			StatusCode: 0,
 		},
-		UserList: users,
+		UserList: []User{DemoUser},
 	})
 }
