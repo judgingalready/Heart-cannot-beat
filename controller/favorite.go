@@ -32,18 +32,20 @@ func FavoriteAction(c *gin.Context) {
 
 	if actionType == "1" {
 		num = 1
+		likes := Like{uint(user.Id), uint(video_id)}
+		db.Create(likes)
 	} else if actionType == "2" {
 		num = -1
+		db.Where("user_id = ?", uint(user.Id)).Delete(&Like{})
 	} else {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "actionType is invalid"},
 		})
 	}
 	VideoForAction(video_id, &videos, num)
-
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
-		StatusMsg:  " 视频已上传成功！",
+		StatusMsg:  "点赞已上传成功！",
 	})
 }
 
