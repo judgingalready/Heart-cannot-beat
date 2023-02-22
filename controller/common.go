@@ -37,6 +37,12 @@ type Account struct {
 	Password string `json:"password,omitempty"`
 }
 
+type Relation struct {
+	Id       int64 `json:"id,omitempty"`
+	Follow   int64 `json:"follow,omitempty"`
+	Follower int64 `json:"follower,omitempty"`
+}
+
 type Message struct {
 	Id         int64  `json:"id,omitempty"`
 	Content    string `json:"content,omitempty"`

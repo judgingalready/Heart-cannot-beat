@@ -44,6 +44,11 @@ func InitDb() {
 		panic(err)
 	}
 
+	err = db.AutoMigrate(&Relation{})
+	if err != nil {
+		panic(err)
+	}
+
 	sqlDB, _ := db.DB()
 
 	//设置数据库连接池参数    sqlDB.SetMaxOpenConns(100)   //设置数据库连接池最大连接数
