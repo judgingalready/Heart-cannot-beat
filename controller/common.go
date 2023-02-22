@@ -44,6 +44,12 @@ type Like struct {
 	// Video   Video `gorm:"foreignkey:VideoID"`
 }
 
+type Relation struct {
+	Id       int64 `json:"id,omitempty"`
+	Follow   int64 `json:"follow,omitempty"`
+	Follower int64 `json:"follower,omitempty"`
+}
+
 type Message struct {
 	Id         int64  `json:"id,omitempty"`
 	Content    string `json:"content,omitempty"`

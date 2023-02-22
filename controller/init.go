@@ -45,6 +45,7 @@ func InitDb() {
 	}
 
 	err = db.AutoMigrate(&Like{})
+	err = db.AutoMigrate(&Relation{})
 	if err != nil {
 		panic(err)
 	}
