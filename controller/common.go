@@ -37,6 +37,13 @@ type Account struct {
 	Password string `json:"password,omitempty"`
 }
 
+type Like struct {
+	UserID  uint `gorm:"index"`
+	VideoID uint `gorm:"index"`
+	// User    User  `gorm:"foreignkey:UserID"`
+	// Video   Video `gorm:"foreignkey:VideoID"`
+}
+
 type Message struct {
 	Id         int64  `json:"id,omitempty"`
 	Content    string `json:"content,omitempty"`

@@ -40,6 +40,11 @@ func FavoriteAction(c *gin.Context) {
 		})
 	}
 	VideoForAction(video_id, &videos, num)
+
+	c.JSON(http.StatusOK, Response{
+		StatusCode: 0,
+		StatusMsg:  " 视频已上传成功！",
+	})
 }
 
 // FavoriteList all users have same favorite video list
