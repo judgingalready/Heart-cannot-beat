@@ -22,6 +22,7 @@ type Comment struct {
 	UserID     int64
 	Content    string `json:"content,omitempty"`
 	CreateDate string `json:"create_date,omitempty"`
+	VideoId    int64
 }
 
 type User struct {
@@ -41,8 +42,14 @@ type Account struct {
 type Like struct {
 	UserID  uint `gorm:"userid"`
 	VideoID uint `gorm:"videoid"`
+
 	// User    User  `gorm:"foreignkey:UserID"`
 	// Video   Video `gorm:"foreignkey:VideoID"`
+}
+
+type CommentForVideo struct {
+	VideoID int64   `gorm:"videoid"`
+	comment Comment `json:"comment"`
 }
 
 type Relation struct {

@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ type CommentActionResponse struct {
 func CommentAction(c *gin.Context) {
 	token := c.Query("token")
 	actionType := c.Query("action_type")
+	videoId, _ := strconv.ParseInt(c.Query("video_id"), 10, 64)
 
 	var user User
 	if userExitErr := db.Where("name = ?", token).Take(&user).Error; userExitErr == nil {
@@ -29,7 +31,7 @@ func CommentAction(c *gin.Context) {
 			text := c.Query("comment_text")
 			currentTime := fmt.Sprintf("%d-%d", time.Now().Month(), time.Now().Day())
 
-			comment := Comment{User: user, Content: text, CreateDate: currentTime}
+			comment := Comment{User: user, Content: text, CreateDate: currentTime, VideoId: videoId}
 
 			createCommentErr := db.Create(&comment).Error
 			if createCommentErr != nil {
@@ -38,6 +40,7 @@ func CommentAction(c *gin.Context) {
 					StatusMsg:  createCommentErr.Error(),
 				})
 			}
+
 			c.JSON(http.StatusOK, CommentActionResponse{Response: Response{StatusCode: 0},
 				Comment: Comment{
 					Id:         comment.Id,
@@ -64,8 +67,34 @@ func CommentAction(c *gin.Context) {
 
 // CommentList all videos have same demo comment list
 func CommentList(c *gin.Context) {
+
+	token := c.Query("token")
+	videoId := c.Query("video_id")
+
+	var user User
+	userExitErr := db.Where("name = ?", token).Take(&user).Error
+	if userExitErr != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+		})
+		return
+	}
+
+	var comments []Comment
+	err := db.Where("comments.video_id = ?", videoId).Order("comments.id desc").
+		Find(&comments).Error
+
+	if err != nil {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "cannot get comments"},
+		})
+	}
+
 	c.JSON(http.StatusOK, CommentListResponse{
-		Response:    Response{StatusCode: 0},
-		CommentList: DemoComments,
+		Response: Response{
+			StatusCode: 0,
+		},
+		CommentList: comments,
 	})
+
 }
