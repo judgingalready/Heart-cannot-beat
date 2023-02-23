@@ -45,6 +45,8 @@ type Relation struct {
 
 type Message struct {
 	Id         int64  `json:"id,omitempty"`
+	ToUserId   int64  `json:"ToUserId,omitempty"`
+	FromUserId int64  `json:"FromUserId,omitempty"`
 	Content    string `json:"content,omitempty"`
 	CreateTime string `json:"create_time,omitempty"`
 }

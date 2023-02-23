@@ -3,6 +3,7 @@ package controller
 import (
 	// "fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,6 +11,21 @@ import (
 type UserListResponse struct {
 	Response
 	UserList []User `json:"user_list"`
+}
+
+type FriendUser struct {
+	Id            int64  `json:"id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	FollowCount   int64  `json:"follow_count,omitempty"`
+	FollowerCount int64  `json:"follower_count,omitempty"`
+	IsFollow      bool   `json:"is_follow,omitempty" default:"true"`
+	FriendMessage string `json:"message,omitempty"`
+	MsgType       int64  `json:"msgType,omitempty"`
+}
+
+type FriendUserListResponse struct {
+	Response
+	FriendUserList []FriendUser `json:"user_list"`
 }
 
 // RelationAction no practical effect, just check if token is valid
@@ -36,6 +52,13 @@ func RelationAction(c *gin.Context) {
 			// 注意不能关注自己
 			if user.Id == to_user.Id {
 				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "您不能关注自己"})
+				return
+			}
+			// 注意不能重复关注
+			var relation Relation
+			relationTakeErr := db.Where("follow = ? AND follower = ?", to_user.Id, user.Id).Take(&relation).Error
+			if relationTakeErr == nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "您不能重复关注该用户"})
 				return
 			}
 
@@ -101,7 +124,7 @@ func FollowList(c *gin.Context) {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
 		return
 	}
-	// 在Relation数据查找关注的人的id
+	// 在Relation数据查找关注者的id
 	relations := []Relation{}
 	relationsFinderr := db.Where("follower = ?", user_id).Find(&relations).Error
 	if relationsFinderr != nil {
@@ -175,10 +198,75 @@ func FollowerList(c *gin.Context) {
 
 // FriendList all users have same friend list
 func FriendList(c *gin.Context) {
-	c.JSON(http.StatusOK, UserListResponse{
+	user_id := c.Query("user_id")
+	// 查找用户
+	var user User
+	userExitErr := db.Where("id = ?", user_id).Take(&user).Error
+	if userExitErr != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+		return
+	}
+	// 在Relation数据查找和用户相关的记录（只查找一次）
+	relations := []Relation{}
+	relationsFinderr := db.Where("follow = ? OR follower = ?", user_id, user_id).Find(&relations).Error
+	if relationsFinderr != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库查询失败"})
+		return
+	}
+	// 提取用户的关注者id和粉丝id
+	follows, followers := []int64{}, []int64{}
+	userIdInt, err := strconv.ParseInt(user_id, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "用户id非法"})
+		return
+	}
+	for _, relation := range relations {
+		if relation.Follow == userIdInt {
+			followers = append(followers, relation.Follower)
+		} else if relation.Follower == userIdInt {
+			follows = append(follows, relation.Follow)
+		}
+	}
+	// 寻找关注者和粉丝的共同者id
+	friends := []int64{}
+	for i, _ := range follows {
+		for j, _ := range followers {
+			if follows[i] == followers[j] {
+				friends = append(friends, follows[i])
+				break
+			}
+		}
+	}
+	// 根据id在User数据库查找
+	users := []User{}
+	friendsFindErr := db.Where("id IN ?", friends).Find(&users).Error
+	if friendsFindErr != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Users数据库查询失败"})
+		return
+	}
+	// 查找与好友双方有关的最新消息
+	var message Message
+	friendUsers := []FriendUser{}
+	for i, _ := range users {
+		messageFindErr := db.Where("(to_user_id = ? AND from_user_id = ?) OR (to_user_id = ? AND from_user_id = ?)",
+			userIdInt, users[i].Id, users[i].Id, userIdInt).Last(&message).Error // 暂时按照主键降序查找
+		if messageFindErr == nil {
+			msgType := 0
+			if message.FromUserId == userIdInt {
+				msgType = 1
+			}
+			friendUsers = append(friendUsers, FriendUser{Id: users[i].Id, Name: users[i].Name, FollowCount: users[i].FollowCount,
+				FollowerCount: users[i].FollowerCount, IsFollow: true, FriendMessage: message.Content, MsgType: int64(msgType)}) // 把好友的IsFollow设为true（已关注）
+		} else {
+			friendUsers = append(friendUsers, FriendUser{Id: users[i].Id, Name: users[i].Name, FollowCount: users[i].FollowCount,
+				FollowerCount: users[i].FollowerCount, IsFollow: true}) // 把好友的IsFollow设为true（已关注）
+		}
+	}
+
+	c.JSON(http.StatusOK, FriendUserListResponse{
 		Response: Response{
 			StatusCode: 0,
 		},
-		UserList: []User{DemoUser},
+		FriendUserList: friendUsers,
 	})
 }
