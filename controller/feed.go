@@ -31,13 +31,7 @@ func Feed(c *gin.Context) {
 	fmt.Println(latestTime)
 
 	var user User
-	verifyErr := VerifyToken(token, &user)
-	if verifyErr != nil {
-		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "tokenis invalid"},
-		})
-		return
-	}
+	VerifyToken(token, &user)
 
 	var videos []Video
 	SearchVideoForFeed(&videos, latestTime)
