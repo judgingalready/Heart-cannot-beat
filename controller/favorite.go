@@ -53,11 +53,11 @@ func FavoriteAction(c *gin.Context) {
 		})
 	}
 
-	if err := tx.Where("id = ?", video_id).
-		Find(&video).
+	if err := tx.Model(&User{}).Where("id = ?", user.Id).
 		UpdateColumn("favorate_count", gorm.Expr("favorate_count + ?", num)).
 		Error; err != nil {
 		tx.Rollback()
+		fmt.Println(err)
 		return
 	}
 	if err := tx.Model(&User{}).
