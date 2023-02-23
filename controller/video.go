@@ -24,3 +24,13 @@ func VideoForAction(video_id int64, videos *[]Video, num int32) {
 		panic(err)
 	}
 }
+
+func VideoForFavorite(userID string, videos *[]Video) {
+	err := db.Joins("JOIN likes ON likes.video_id = videos.id").
+		Where("likes.user_id = ?", userID).
+		Find(&videos).Error
+
+	if err != nil {
+		panic(err)
+	}
+}

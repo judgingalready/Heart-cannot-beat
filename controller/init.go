@@ -44,12 +44,27 @@ func InitDb() {
 		panic(err)
 	}
 
+	err = db.AutoMigrate(&Like{})
+	if err != nil {
+		panic(err)
+	}
+
 	err = db.AutoMigrate(&Relation{})
 	if err != nil {
 		panic(err)
 	}
 
 	err = db.AutoMigrate(&Message{})
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.AutoMigrate(&Comment{})
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.AutoMigrate(&CommentForVideo{})
 	if err != nil {
 		panic(err)
 	}
