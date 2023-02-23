@@ -84,7 +84,7 @@ func MessageChat(c *gin.Context) {
 			return
 		}
 		// -1表明对话刚刚开始，查找与双方有关的所有消息
-		var messages []Message
+		messages := []Message{}
 		if relation.MessageId == -1 {
 			messagesFindErr := db.Where("(to_user_id = ? AND from_user_id = ?) OR (to_user_id = ? AND from_user_id = ?)",
 				toUserIdInt, user.Id, user.Id, toUserIdInt).Order("Id").Find(&messages).Error // 暂时按照主键顺序查找
@@ -101,6 +101,7 @@ func MessageChat(c *gin.Context) {
 				return
 			}
 		}
+
 		// 若有新消息，则更新MessageId
 		if len(messages) > 0 {
 			relation.MessageId = messages[len(messages)-1].Id
@@ -108,10 +109,6 @@ func MessageChat(c *gin.Context) {
 			if relationSaveErr != nil {
 				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库更新失败"})
 				return
-			}
-			// 似乎需要将其中一个id置0
-			for i, _ := range messages {
-				messages[i].Id = 0
 			}
 		}
 		c.JSON(http.StatusOK, ChatResponse{Response: Response{StatusCode: 0}, MessageList: messages})
