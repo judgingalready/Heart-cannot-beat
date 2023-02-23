@@ -1,6 +1,8 @@
 package controller
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 const videoCount = 30
 
@@ -19,11 +21,20 @@ func SearchVideoForPublishList(user_id int64, videos *[]Video) {
 	}
 }
 
-func VideoForAction(video_id int64, videos *[]Video, num int32) {
-	err := db.Where("id = ?", video_id).Find(videos).UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", num)).Error
-	if err != nil {
-		panic(err)
+func VideoForAction(video_id int64, video *Video, num int32) error {
+	err := db.Where("id = ?", video_id).Find(video).UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", num)).Error
+	favorateErr := db.Model(&User{}).
+		Where("id = ?", video.AuthorID).
+		UpdateColumn("total_favorated", gorm.Expr("total_favorated + ?", num)).
+		Error
+	// TotalFavorated
+	if favorateErr != nil {
+		return favorateErr
 	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func VideoForFavorite(userID string, videos *[]Video) {
