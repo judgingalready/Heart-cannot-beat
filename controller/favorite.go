@@ -13,13 +13,14 @@ func FavoriteAction(c *gin.Context) {
 	actionType := c.Query("action_type")
 
 	var user User
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
 		})
 		return
 	}
+
 	video_id, err := strconv.ParseInt(c.Query("video_id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusOK, UserResponse{
@@ -56,16 +57,15 @@ func FavoriteList(c *gin.Context) {
 	userID := c.Query("user_id")
 
 	var user User
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
 		})
 		return
 	}
 
 	var videos []Video
-
 	VideoForFavorite(userID, &videos)
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
