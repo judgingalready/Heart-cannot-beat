@@ -93,7 +93,7 @@ func Publish(c *gin.Context) {
 	}
 
 	//在Videos数据库中插入数据
-	CreateVideoErr := db.Create(&Video{AuthorID: user.Id, PlayUrl: videoName, CoverUrl: videoName[:len(videoName)-3] + "png"}).Error
+	CreateVideoErr := db.Create(&Video{AuthorID: user.Id, PlayUrl: videoName, CoverUrl: videoName[:len(videoName)-3] + "png", PublishTime: time.Now().Unix()}).Error
 	if CreateVideoErr != nil {
 		c.JSON(http.StatusOK, Response{
 			StatusCode: 1,

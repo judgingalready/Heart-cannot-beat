@@ -4,8 +4,9 @@ import "gorm.io/gorm"
 
 const videoCount = 30
 
-func SearchVideoForFeed(videos *[]Video) {
-	err := db.Preload("Author").Limit(videoCount).Find(videos).Error
+func SearchVideoForFeed(videos *[]Video, latestTime int64) {
+	err := db.Preload("Author").Order("videos.publish_time desc").Where("videos.publish_time < ?", latestTime).
+		Limit(videoCount).Find(videos).Error
 	if err != nil {
 		panic(err)
 	}
