@@ -1,17 +1,16 @@
 package controller
 
 import (
-	"fmt"
-	"github.com/gin-gonic/gin"
+	// "fmt"
 	"net/http"
 	"strconv"
-	"sync/atomic"
-	"time"
+	// "sync/atomic"
+	// "time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var tempChat = map[string][]Message{}
-
-var messageIdSequence = int64(1)
 
 type ChatResponse struct {
 	Response
@@ -24,23 +23,30 @@ func MessageAction(c *gin.Context) {
 	toUserId := c.Query("to_user_id")
 	content := c.Query("content")
 
-	if user, exist := usersLoginInfo[token]; exist {
-		userIdB, _ := strconv.Atoi(toUserId)
-		chatKey := genChatKey(user.Id, int64(userIdB))
-
-		atomic.AddInt64(&messageIdSequence, 1)
-		curMessage := Message{
-			Id:         messageIdSequence,
-			Content:    content,
-			CreateTime: time.Now().Format(time.Kitchen),
-		}
-
-		if messages, exist := tempChat[chatKey]; exist {
-			tempChat[chatKey] = append(messages, curMessage)
+	var user User
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
+		return
+	}
+	// "to_user_id"转换为int64类型
+	toUserIdInt, err := strconv.ParseInt(toUserId, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "用户id非法"})
+		return
+	}
+	// 查找对方用户
+	var toUser User
+	toUserExitErr := db.Where("id = ?", toUserIdInt).Take(&toUser).Error
+	if toUserExitErr == nil {
+		CreateMessageErr := db.Create(&Message{ToUserId: toUserIdInt, FromUserId: user.Id, Content: content}).Error
+		if CreateMessageErr != nil {
+			c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "发送消息失败！"})
 		} else {
-			tempChat[chatKey] = []Message{curMessage}
+			c.JSON(http.StatusOK, Response{StatusCode: 0})
 		}
-		c.JSON(http.StatusOK, Response{StatusCode: 0})
 	} else {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
 	}
@@ -51,19 +57,65 @@ func MessageChat(c *gin.Context) {
 	token := c.Query("token")
 	toUserId := c.Query("to_user_id")
 
-	if user, exist := usersLoginInfo[token]; exist {
-		userIdB, _ := strconv.Atoi(toUserId)
-		chatKey := genChatKey(user.Id, int64(userIdB))
+	var user User
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
+		return
+	}
 
-		c.JSON(http.StatusOK, ChatResponse{Response: Response{StatusCode: 0}, MessageList: tempChat[chatKey]})
+	// "to_user_id"转换为int64类型
+	toUserIdInt, err := strconv.ParseInt(toUserId, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "用户id非法"})
+		return
+	}
+	// 查找对方用户
+	var toUser User
+	toUserExitErr := db.Where("id = ?", toUserIdInt).Take(&toUser).Error
+	if toUserExitErr == nil {
+		// 查找relation数据库中用户与对方对应的MessageId
+		var relation Relation
+		relationFindErr := db.Where("follower = ? AND follow = ?", user.Id, toUserIdInt).Take(&relation).Error
+		if relationFindErr != nil {
+			c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找relations数据库失败"})
+			return
+		}
+		// -1表明对话刚刚开始，查找与双方有关的所有消息
+		var messages []Message
+		if relation.MessageId == -1 {
+			messagesFindErr := db.Where("(to_user_id = ? AND from_user_id = ?) OR (to_user_id = ? AND from_user_id = ?)",
+				toUserIdInt, user.Id, user.Id, toUserIdInt).Order("Id").Find(&messages).Error // 暂时按照主键顺序查找
+			if messagesFindErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
+				return
+			}
+
+		} else { // 对话正在进行，只返回对方发来的最新消息
+			messagesFindErr := db.Where("to_user_id = ? AND from_user_id = ? AND Id > ?",
+				user.Id, toUserIdInt, relation.Id).Order("Id").Find(&messages).Error // 暂时按照主键降序查找
+			if messagesFindErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
+				return
+			}
+		}
+		// 若有新消息，则更新MessageId
+		if len(messages) > 0 {
+			relation.MessageId = messages[len(messages)-1].Id
+			relationSaveErr := db.Save(&relation).Error
+			if relationSaveErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库更新失败"})
+				return
+			}
+			// 似乎需要将其中一个id置0
+			for i, _ := range messages {
+				messages[i].Id = 0
+			}
+		}
+		c.JSON(http.StatusOK, ChatResponse{Response: Response{StatusCode: 0}, MessageList: messages})
 	} else {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
 	}
-}
-
-func genChatKey(userIdA int64, userIdB int64) string {
-	if userIdA > userIdB {
-		return fmt.Sprintf("%d_%d", userIdB, userIdA)
-	}
-	return fmt.Sprintf("%d_%d", userIdA, userIdB)
 }

@@ -54,6 +54,11 @@ func InitDb() {
 		panic(err)
 	}
 
+	err = db.AutoMigrate(&Message{})
+	if err != nil {
+		panic(err)
+	}
+
 	err = db.AutoMigrate(&Comment{})
 	if err != nil {
 		panic(err)
