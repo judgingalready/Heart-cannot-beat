@@ -12,6 +12,7 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"gorm.io/gorm"
 )
 
 type VideoListResponse struct {
@@ -91,14 +92,22 @@ func Publish(c *gin.Context) {
 		})
 		return
 	}
-
+	tx := db.Begin()
 	//在Videos数据库中插入数据
-	CreateVideoErr := db.Create(&Video{AuthorID: user.Id, PlayUrl: videoName, CoverUrl: videoName[:len(videoName)-3] + "png", PublishTime: time.Now().Unix()}).Error
-	if CreateVideoErr != nil {
+	if err := db.Create(&Video{AuthorID: user.Id, PlayUrl: videoName, CoverUrl: videoName[:len(videoName)-3] + "png", PublishTime: time.Now().Unix()}).
+		Error; err != nil {
 		c.JSON(http.StatusOK, Response{
 			StatusCode: 1,
-			StatusMsg:  CreateVideoErr.Error(),
+			StatusMsg:  err.Error(),
 		})
+		return
+	}
+
+	if err := tx.Model(&User{}).
+		Where("id = ?", user.Id).
+		UpdateColumn("work_count", gorm.Expr("work_count + ?", 1)).
+		Error; err != nil {
+		tx.Rollback()
 		return
 	}
 
