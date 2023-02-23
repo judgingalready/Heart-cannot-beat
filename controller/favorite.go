@@ -50,6 +50,7 @@ func FavoriteAction(c *gin.Context) {
 			return
 		}
 	} else {
+		tx.Rollback()
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "actionType is invalid"},
 		})
@@ -65,7 +66,7 @@ func FavoriteAction(c *gin.Context) {
 	}
 	if err := tx.Model(&User{}).
 		Where("id = ?", video.AuthorID).
-		UpdateColumn("total_favorated", gorm.Expr("total_favorated + ?", num)).
+		UpdateColumn("total_favorited", gorm.Expr("total_favorited + ?", num)).
 		Error; err != nil {
 		fmt.Println(err)
 		tx.Rollback()
@@ -73,7 +74,7 @@ func FavoriteAction(c *gin.Context) {
 	}
 	if err := tx.Model(&User{}).
 		Where("id = ?", user.Id).
-		UpdateColumn("favorate_count", gorm.Expr("favorate_count + ?", num)).
+		UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", num)).
 		Error; err != nil {
 		fmt.Println(err)
 		tx.Rollback()
