@@ -110,6 +110,12 @@ func Publish(c *gin.Context) {
 		tx.Rollback()
 		return
 	}
+	if err := tx.Commit().Error; err != nil {
+		// 如果提交失败，则回滚事务
+		tx.Rollback()
+		fmt.Println("Error committing transaction in publish:", err)
+		return
+	}
 
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
