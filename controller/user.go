@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
+
 	// "sync/atomic"
 
 	"github.com/gin-gonic/gin"
@@ -54,20 +56,31 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "用户已经存在!"},
 		})
+		return
 	} else {
-		// atomic.AddInt64(&userIdSequence, 1)
+		tx := db.Begin()
 
-		CreateUserErr := db.Create(&User{Name: username}).Error
-		if CreateUserErr != nil {
+		if err := tx.Create(&User{Name: username}).Error; err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusOK, UserLoginResponse{
-				Response: Response{StatusCode: 1, StatusMsg: "用户注册错误!"},
+				Response: Response{StatusCode: 1, StatusMsg: "Error creating User"},
 			})
+			return
 		}
-		CreateAccountErr := db.Create(&Account{Name: username, Password: password}).Error
-		if CreateAccountErr != nil {
+		if err := tx.Create(&Account{Name: username, Password: password}).Error; err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusOK, UserLoginResponse{
-				Response: Response{StatusCode: 1, StatusMsg: "用户注册错误!"},
+				Response: Response{StatusCode: 1, StatusMsg: "Error creating count"},
 			})
+			return
+		}
+
+		// 提交事务
+		if err := tx.Commit().Error; err != nil {
+			// 如果提交失败，则回滚事务
+			tx.Rollback()
+			fmt.Println("Error committing transaction:", err)
+			return
 		}
 
 		c.JSON(http.StatusOK, UserLoginResponse{
