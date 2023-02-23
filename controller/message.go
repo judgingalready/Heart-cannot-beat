@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"fmt"
+	// "fmt"
 	"net/http"
 	"strconv"
 	// "sync/atomic"
@@ -11,8 +11,6 @@ import (
 )
 
 var tempChat = map[string][]Message{}
-
-var messageIdSequence = int64(-1)
 
 type ChatResponse struct {
 	Response
@@ -26,10 +24,11 @@ func MessageAction(c *gin.Context) {
 	content := c.Query("content")
 
 	var user User
-	// token先设为用户名
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
 		return
 	}
 	// "to_user_id"转换为int64类型
@@ -59,12 +58,14 @@ func MessageChat(c *gin.Context) {
 	toUserId := c.Query("to_user_id")
 
 	var user User
-	// token先设为用户名
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
 		return
 	}
+
 	// "to_user_id"转换为int64类型
 	toUserIdInt, err := strconv.ParseInt(toUserId, 10, 64)
 	if err != nil {
@@ -75,23 +76,44 @@ func MessageChat(c *gin.Context) {
 	var toUser User
 	toUserExitErr := db.Where("id = ?", toUserIdInt).Take(&toUser).Error
 	if toUserExitErr == nil {
-		// // 查找与双方有关的消息
-		// var messages []Message
-		// messagesFindErr := db.Where("((to_user_id = ? AND from_user_id = ?) OR (to_user_id = ? AND from_user_id = ?)) AND Id > ?",
-		// 	toUserIdInt, user.Id, user.Id, toUserIdInt, messageIdSequence).Order("Id").Find(&messages).Error // 暂时按照主键降序查找
-
-		// 查找对方发来的消息
-		var messages []Message
-		messagesFindErr := db.Where("to_user_id = ? AND from_user_id = ? AND Id > ?",
-			user.Id, toUserIdInt, messageIdSequence).Order("Id").Find(&messages).Error // 暂时按照主键降序查找
-		if messagesFindErr != nil {
-			c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
+		// 查找relation数据库中用户与对方对应的MessageId
+		var relation Relation
+		relationFindErr := db.Where("follower = ? AND follow = ?", user.Id, toUserIdInt).Take(&relation).Error
+		if relationFindErr != nil {
+			c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找relations数据库失败"})
 			return
 		}
-		if len(messages) > 0 {
-			messageIdSequence = messages[len(messages)-1].Id
+		// -1表明对话刚刚开始，查找与双方有关的所有消息
+		var messages []Message
+		if relation.MessageId == -1 {
+			messagesFindErr := db.Where("(to_user_id = ? AND from_user_id = ?) OR (to_user_id = ? AND from_user_id = ?)",
+				toUserIdInt, user.Id, user.Id, toUserIdInt).Order("Id").Find(&messages).Error // 暂时按照主键顺序查找
+			if messagesFindErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
+				return
+			}
+
+		} else { // 对话正在进行，只返回对方发来的最新消息
+			messagesFindErr := db.Where("to_user_id = ? AND from_user_id = ? AND Id > ?",
+				user.Id, toUserIdInt, relation.Id).Order("Id").Find(&messages).Error // 暂时按照主键降序查找
+			if messagesFindErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
+				return
+			}
 		}
-		fmt.Println(messages)
+		// 若有新消息，则更新MessageId
+		if len(messages) > 0 {
+			relation.MessageId = messages[len(messages)-1].Id
+			relationSaveErr := db.Save(&relation).Error
+			if relationSaveErr != nil {
+				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库更新失败"})
+				return
+			}
+			// 似乎需要将其中一个id置0
+			for i, _ := range messages {
+				messages[i].Id = 0
+			}
+		}
 		c.JSON(http.StatusOK, ChatResponse{Response: Response{StatusCode: 0}, MessageList: messages})
 	} else {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})

@@ -30,12 +30,17 @@ type FriendUserListResponse struct {
 
 // RelationAction no practical effect, just check if token is valid
 func RelationAction(c *gin.Context) {
-	// token先设为用户名
 	token := c.Query("token")
-
 	var user User
-	userExistErr := db.Where("name = ?", token).Take(&user).Error
-	if userExistErr == nil {
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
+		return
+	}
+
+	if verifyErr == nil {
 		// 对方用户id
 		to_user_id := c.Query("to_user_id")
 
@@ -237,12 +242,29 @@ func FriendList(c *gin.Context) {
 			}
 		}
 	}
-	// 根据id在User数据库查找
+	// 根据id在User数据库查找好友
 	users := []User{}
 	friendsFindErr := db.Where("id IN ?", friends).Find(&users).Error
 	if friendsFindErr != nil {
 		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Users数据库查询失败"})
 		return
+	}
+	// 将Relation数据库中用户为followers的MessageId字段全置为-1
+	setRelations := []Relation{}
+	setRelationsFindErr := db.Where("follower = ?", user_id).Find(&setRelations).Error
+	if setRelationsFindErr != nil {
+		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库查询失败"})
+		return
+	}
+	if len(setRelations) > 0 {
+		for i, _ := range setRelations {
+			setRelations[i].MessageId = -1
+		}
+		setRelationsSaveErr := db.Save(&setRelations).Error
+		if setRelationsSaveErr != nil {
+			c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库更新失败"})
+			return
+		}
 	}
 	// 查找与好友双方有关的最新消息
 	var message Message
