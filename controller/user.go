@@ -39,8 +39,13 @@ func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	// token先设为用户名
-	token := username
+	token, tokenErr := GenerateToken(username)
+	if tokenErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token generate error"},
+		})
+		return
+	}
 
 	var account Account
 	accountExistErr := db.Where("name = ?", username).Take(&account).Error
@@ -77,12 +82,16 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	// token先设为用户名
-	token := username
+	token, tokenErr := GenerateToken(username)
+	if tokenErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token generate error"},
+		})
+		return
+	}
 
 	var account Account
 	accountExitErr := db.Where("name = ? AND password = ?", username, password).Take(&account).Error
-
 	if accountExitErr == nil {
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
@@ -100,17 +109,16 @@ func UserInfo(c *gin.Context) {
 	token := c.Query("token")
 
 	var user User
-	// token先设为用户名
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-
-	if userExitErr == nil {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 0},
-			User:     user,
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token paraser error"},
 		})
-	} else {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
-		})
+		return
 	}
+
+	c.JSON(http.StatusOK, UserResponse{
+		Response: Response{StatusCode: 0},
+		User:     user,
+	})
 }

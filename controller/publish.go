@@ -24,11 +24,11 @@ func Publish(c *gin.Context) {
 	token := c.PostForm("token")
 
 	var user User
-	// token先设为用户名
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
+		})
 		return
 	}
 
@@ -120,10 +120,10 @@ func PublishList(c *gin.Context) {
 
 	token := c.Query("token")
 	var user User
-	userExitErr := db.Where("name = ?", token).Take(&user).Error
-	if userExitErr != nil {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "token is invalid"},
+	verifyErr := VerifyToken(token, &user)
+	if verifyErr != nil {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "token解析错误!"},
 		})
 		return
 	}
