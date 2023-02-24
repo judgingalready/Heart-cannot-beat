@@ -2,6 +2,7 @@ package controller
 
 import (
 	// "fmt"
+	"fmt"
 	"net/http"
 	"strconv"
 	// "sync/atomic"
@@ -94,8 +95,10 @@ func MessageChat(c *gin.Context) {
 			}
 
 		} else { // 对话正在进行，只返回对方发来的最新消息
+
 			messagesFindErr := db.Where("to_user_id = ? AND from_user_id = ? AND Id > ?",
-				user.Id, toUserIdInt, relation.Id).Order("Id").Find(&messages).Error // 暂时按照主键降序查找
+				user.Id, toUserIdInt, relation.MessageId).Order("Id").Find(&messages).Error // 暂时按照主键顺序查找
+
 			if messagesFindErr != nil {
 				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "查找messages数据库失败"})
 				return
@@ -105,6 +108,7 @@ func MessageChat(c *gin.Context) {
 		// 若有新消息，则更新MessageId
 		if len(messages) > 0 {
 			relation.MessageId = messages[len(messages)-1].Id
+			fmt.Println(messages, relation.MessageId)
 			relationSaveErr := db.Save(&relation).Error
 			if relationSaveErr != nil {
 				c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "Relations数据库更新失败"})

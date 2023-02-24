@@ -47,7 +47,8 @@ func Publish(c *gin.Context) {
 	currentTime := time.Now().Unix()
 	filename = fmt.Sprintf("%d_%d_%s", user.Id, currentTime, filename)
 	// 视频存入Videos数据库的url：IP:Port/static/视频本地路径
-	ip_port := "192.168.31.148:8080" //暂时写死
+	// ip_port := "192.168.31.148:8080" //暂时写死
+	ip_port := "114.212.85.230:8080" //暂时写死
 	videoName := fmt.Sprintf("%s%s", "http://"+ip_port+"/static/", filename)
 	saveFile := filepath.Join("./public/", filename)
 
