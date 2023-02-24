@@ -105,7 +105,7 @@ func Publish(c *gin.Context) {
 
 	if err := tx.Model(&User{}).
 		Where("id = ?", user.Id).
-		UpdateColumn("work_count", gorm.Expr("work_count + 1")).
+		UpdateColumn("work_count", gorm.Expr("work_count + ?", 1)).
 		Error; err != nil {
 		tx.Rollback()
 		return
