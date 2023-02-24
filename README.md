@@ -1,6 +1,6 @@
 # Heart-cannot-beat
 
-## DOUSENG
+## DOUSHENG
 
 采用了 gin + gorm + mysql的框架，完成了基本功能+社交功能+互动功能
 
