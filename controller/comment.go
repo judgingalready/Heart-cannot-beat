@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type CommentListResponse struct {
@@ -40,6 +41,10 @@ func CommentAction(c *gin.Context) {
 		comment := Comment{User: user, Content: text, CreateDate: currentTime, VideoId: videoId}
 
 		createCommentErr := db.Create(&comment).Error
+		db.Model(&Video{}).
+			Where("id = ?", videoId).
+			UpdateColumn("comment_count", gorm.Expr("comment_count + ?", 1))
+
 		if createCommentErr != nil {
 			c.JSON(http.StatusOK, Response{
 				StatusCode: 1,
@@ -58,6 +63,9 @@ func CommentAction(c *gin.Context) {
 	} else if actionType == "2" {
 		commentId := c.Query("comment_id")
 		deleteCommentErr := db.Where("id = ?", commentId).Delete(&Comment{}).Error
+		db.Model(&Video{}).
+			Where("id = ?", videoId).
+			UpdateColumn("comment_count", gorm.Expr("comment_count + ?", -1))
 		if deleteCommentErr != nil {
 			c.JSON(http.StatusOK, Response{
 				StatusCode: 1,
