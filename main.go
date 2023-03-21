@@ -10,6 +10,8 @@ import (
 func main() {
 	go service.RunMessageServer()
 	controller.InitDb()
+	controller.InitRedis()
+	controller.InitRabbitMQ()
 	r := gin.Default()
 
 	initRouter(r)

@@ -1,13 +1,20 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/go-redis/redis/v8"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
+var redisContext = context.Background()
+var rdbFollow *redis.Client          //关注者redis数据库，名称为0（key:用户id，value：关注者id）
+var rdbFollower *redis.Client        //粉丝redis数据库，名称为1（key:用户id，value：粉丝id）
+var rabbitmqConnect *amqp.Connection //RabbitMQ连接
 
 func InitDb() {
 	//配置MySQL连接参数
@@ -75,10 +82,48 @@ func InitDb() {
 	sqlDB.SetMaxIdleConns(20) //连接池最大允许的空闲连接数，如果没有sql任务需要执行的连接数大于20，超过的连接会被连接池关闭。
 }
 
+func InitRedis() {
+	//配置Reids连接参数
+	host := "0.0.0.0:6379" //地址
+	password := "123"      //密码
+
+	rdbFollow = redis.NewClient(&redis.Options{
+		Addr:     host,
+		Password: password,
+		DB:       0, //数据库0
+	})
+
+	rdbFollower = redis.NewClient(&redis.Options{
+		Addr:     host,
+		Password: password,
+		DB:       1, //数据库1
+	})
+}
+
+func InitRabbitMQ() {
+	var err error
+	rabbitmqConnect, err = amqp.Dial("amqp://admin:admin@localhost:5672/")
+	if err != nil {
+		panic(err)
+	}
+	// 保持持续消费消息
+	go FollowConsumer("FollowAdd")
+	go FollowConsumer("FollowDel")
+}
+
 /*
 *	获取gorm db对象，其他包需要执行数据库查询的时候，只要通过getDB()获取db对象即可。不用担心协程并发使
 *	用同样的db对象会共用同一个连接，db对象在调用他的方法的时候会从数据库连接池中获取新的连接。
  */
 func GetDB() *gorm.DB {
 	return db
+}
+
+func GetRedis(n int) *redis.Client {
+	if n == 0 {
+		return rdbFollow
+	} else if n == 1 {
+		return rdbFollower
+	}
+	return nil
 }
